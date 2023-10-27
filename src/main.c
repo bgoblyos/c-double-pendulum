@@ -7,7 +7,8 @@
 #define PI 3.14159265358979323846264338328
 
 /* The name isn't quite correct, since it's
- * most likely 80 bits, but it'll do for now */
+ * most likely 80 bits, but it'll do for now.
+ * It's also the same os double on Windows. */
 typedef long double triple;
 
 typedef unsigned long int ulong;
@@ -121,9 +122,11 @@ pend_state step_sim(pend_state old, pend_state prev, constants c, triple h) {
 		return new;
 }
 
-void full_sim(triple theta1_0, triple theta2_0, pend_state states[],
-							constants c, sim_params params) {
-
+pend_state *full_sim(triple theta1_0, triple theta2_0,
+		constants c, sim_params params) {
+	
+	pend_state *states =
+		(pend_state*)malloc(params.steps*sizeof(pend_state));
 	/* The first two instants are the same, because
 	 * we take a numerical derivative later on */
 	states[0].t1 = states[1].t1 = theta1_0;
@@ -135,13 +138,15 @@ void full_sim(triple theta1_0, triple theta2_0, pend_state states[],
 
 	for (unsigned long int i = 2; i < params.steps; ++i)
 		states[i] = step_sim(states[i-2], states[i-1], c, h);
+
+	return states;
 }
 
 void save_sim_data(pend_state *states, sim_params params) {
 	unsigned long int skip = params.freq / params.plot_freq;
 
-  FILE *upper = fopen("data/temp_upper.dat", "w");
-  FILE *lower = fopen("data/temp_lower.dat", "w");
+	FILE *upper = fopen("data/temp_upper.dat", "w");
+	FILE *lower = fopen("data/temp_lower.dat", "w");
 	for (unsigned long int i = 0; i < params.steps; i += skip) {
 		fprintf(upper, "%Lf %Lf\n", states[i].t1, states[i].p1);
 		fprintf(lower, "%Lf %Lf\n", states[i].t2, states[i].p2);
@@ -150,13 +155,36 @@ void save_sim_data(pend_state *states, sim_params params) {
 	fclose(lower);
 }
 
-void plot_phase_space(char *filename) {
-	FILE *gnuplot = popen("gnuplot", "w");
-	fprintf(gnuplot, "set term svg size 1920,1920 rounded background rgb 'white'\nset output \"%s\"\n", filename);
+void plot_phase_space(char *filename, pend_state states) {
+	FILE *gnuplot;
+	#ifdef _WIN32
+		if (system("where gnuplot 2> nul 1> nul"))
+			gnuplot = NULL;
+		else
+			gnuplot = _popen("gnuplot", "w");
+	#else
+		if (system("which gnuplot 2> /dev/null 1> /dev/null"))
+			gnuplot = NULL;
+		else
+			gnuplot = popen("gnuplot", "w");
+	#endif
+	if (gnuplot == NULL) {
+		printf("gnuplot could not be found, no plot will be saved.\n");
+		printf("The raw data is accesible under data/\n");
+		return;
+	}
+	fprintf(gnuplot, "set term svg size 1920,1920 rounded background rgb");
+	fprintf(gnuplot, "'white'\nset output \"%s\"\n", filename);
 	fprintf(gnuplot, "set xlabel \"angle\"\nset ylabel \"impulse\"\n");
-	fprintf(gnuplot, "plot \"data/temp_upper.dat\" u 1:2 t 'Upper' w l, \"data/temp_lower.dat\" u 1:2 t 'Lower' w l\n");
+	fprintf(gnuplot, "plot \"data/temp_upper.dat\" u 1:2 t 'Upper' w l,");
+	fprintf(gnuplot, "\"data/temp_lower.dat\" u 1:2 t 'Lower' w l\n");
 	fflush(gnuplot);
-	pclose(gnuplot);
+	#ifdef _WIN32
+		_pclose(gnuplot);
+	#else
+		pclose(gnuplot);
+	#endif
+	printf("Phase space plot saved to %s\n", filename);
 }
 
 triple flip_sim(triple theta1, triple theta2, constants c, sim_params params) {
@@ -209,15 +237,15 @@ void flip_plot(triple **data, char *filename, sim_params params) {
 	FILE *f = fopen(filename, "wb");
 	fprintf(f, "P6\n%lu %lu 255\n", params.flip_length, params.flip_length);
 	for (ulong i = 0; i < params.flip_length; i++) {
-    for (ulong j = 0; j < params.flip_length; j++) {
+		for (ulong j = 0; j < params.flip_length; j++) {
 			unsigned char col = (unsigned char)(255*normalize(data[i][j], params.t));
-      /* Writing the pixel's RGB data
+      			/* Writing the pixel's RGB data
 			 * The first parameters may be tweaked
 			 * to get different color schemes      */
 			fputc(col, f);         /* RED   */
-      fputc(0, f);           /* GREEN */
-      fputc((255-col)/5, f); /* Blue  */
-    }
+			fputc(0, f);           /* GREEN */
+			fputc((255-col)/5, f); /* Blue  */
+    		}
 	}
 	fclose(f);
 	printf("Plot written to %s\n", filename);
@@ -239,12 +267,16 @@ int main() {
 	constants c = {1, 1, 9.81};
 	sim_params params;
 	params.t = 60;
-	params.flip_length = 128;
+	params.flip_length = 32;
 	params.freq = 1000;
 	params.dt = (triple)1/params.freq;
 	params.steps = (ulong)(params.t * params.freq);
+	printf("Steps: %lu\n", params.steps);
 	params.plot_freq = 1000;
-	triple **flips = flip_matrix(params, c);
-	flip_plot(flips, "data/out.ppm", params);
+	/*triple **flips = flip_matrix(params, c);
+	flip_plot(flips, "data/out.ppm", params);*/
+	pend_state *states = full_sim(1, 2, c, params);
+	save_sim_data(states, params);
+	plot_phase_space("data/phase.svg");
 	return 0;
 }
