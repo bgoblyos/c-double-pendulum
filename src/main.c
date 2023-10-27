@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 /* This is most likely defined in math.h as well,
  * but here it is rounded to 30 decimals just to be safe */
@@ -61,6 +62,15 @@ triple triple_abs(triple n) {
 	return (n < 0 ? -n : n);
 }
 
+/* Taken from https://stackoverflow.com/a/8465083 */
+char* str_concat(const char *s1, const char *s2)
+{
+    char *result = malloc(strlen(s1) + strlen(s2) + 1);
+    strcpy(result, s1);
+    strcat(result, s2);
+    return result;
+}
+
 /* Function for stepping the simulation. This code snippet is huge and it needs
  * to be used in both simulation types, so I decided to put it into a
  * function on its own. It's probably a good idea to enable compiler
@@ -106,13 +116,13 @@ pend_state step_sim(pend_state old, pend_state prev, constants c, triple h) {
 
 		/* 4th aproximation */
 		k[3].t1 = d_theta_1(prev.t1 + 2*h*k[2].t1, prev.t2 + 2*h*k[2].t2,
-				                prev.p1 + 2*h*k[2].p1, prev.p2 + 2*h*k[2].p2, c);
+			prev.p1 + 2*h*k[2].p1, prev.p2 + 2*h*k[2].p2, c);
 		k[3].t2 = d_theta_2(prev.t1 + 2*h*k[2].t1, prev.t2 + 2*h*k[2].t2,
-				                prev.p1 + 2*h*k[2].p1, prev.p2 + h*k[2].p2, c);
+			prev.p1 + 2*h*k[2].p1, prev.p2 + h*k[2].p2, c);
 		k[3].p1 = d_p_1(prev.t1 + 2*h*k[2].t1, prev.t2 + 2*h*k[2].t2,
-				            k[2].t1, k[2].t2, c);
+			k[2].t1, k[2].t2, c);
 		k[3].p2 = d_p_2(prev.t1 + 2*h*k[2].t1, prev.t2 + 2*h*k[2].t2,
-				            k[2].t1, k[2].t2, c);
+			k[2].t1, k[2].t2, c);
 
 		new.t1 = prev.t1 + (k[0].t1 + 2*k[1].t1 + 2*k[2].t1 + k[3].t1) * h/3;
 		new.t2 = prev.t2 + (k[0].t2 + 2*k[1].t2 + 2*k[2].t2 + k[3].t2) * h/3;
@@ -142,20 +152,18 @@ pend_state *full_sim(triple theta1_0, triple theta2_0,
 	return states;
 }
 
-void save_sim_data(pend_state *states, sim_params params) {
-	unsigned long int skip = params.freq / params.plot_freq;
+void save_sim_data(pend_state *states, sim_params params, char *fname) {
+	ulong skip = params.freq / params.plot_freq;
+	skip = skip < 1 ? 1 : skip;
 
-	FILE *upper = fopen("data/temp_upper.dat", "w");
-	FILE *lower = fopen("data/temp_lower.dat", "w");
-	for (unsigned long int i = 0; i < params.steps; i += skip) {
-		fprintf(upper, "%Lf %Lf\n", states[i].t1, states[i].p1);
-		fprintf(lower, "%Lf %Lf\n", states[i].t2, states[i].p2);
-	}
-	fclose(upper);
-	fclose(lower);
+	FILE *f = fopen(fname, "w");
+	for (ulong i = 0; i < params.steps; i += skip)
+		fprintf(f, "%Lf, %Lf, %Lf, %Lf\n",
+			states[i].t1, states[i].p1, states[i].t2, states[i].p2);
+	fclose(f);
 }
 
-void plot_phase_space(char *filename, pend_state states) {
+void plot_phase_space(pend_state *states, sim_params params, char *filename) {
 	FILE *gnuplot;
 	#ifdef _WIN32
 		if (system("where gnuplot 2> nul 1> nul"))
@@ -173,11 +181,18 @@ void plot_phase_space(char *filename, pend_state states) {
 		printf("The raw data is accesible under data/\n");
 		return;
 	}
-	fprintf(gnuplot, "set term svg size 1920,1920 rounded background rgb");
+	ulong skip = params.freq / params.plot_freq;
+	skip = skip < 1 ? 1 : skip;
+	fprintf(gnuplot, "set term svg size 1000,1000 rounded background rgb");
 	fprintf(gnuplot, "'white'\nset output \"%s\"\n", filename);
 	fprintf(gnuplot, "set xlabel \"angle\"\nset ylabel \"impulse\"\n");
-	fprintf(gnuplot, "plot \"data/temp_upper.dat\" u 1:2 t 'Upper' w l,");
-	fprintf(gnuplot, "\"data/temp_lower.dat\" u 1:2 t 'Lower' w l\n");
+	fprintf(gnuplot, "$dataset << EOD\n");
+	for (ulong i = 0; i < params.steps; i+= skip)
+		fprintf(gnuplot, "%Lf %Lf %Lf %Lf\n",
+			states[i].t1, states[i].p1, states[i].t2, states[i].p2);
+	fprintf(gnuplot, "EOD\n");
+	fprintf(gnuplot, "plot $dataset using 1:2 t 'Upper' w l,");
+	fprintf(gnuplot, "$dataset using 3:4 t 'Lower' w l\n");
 	fflush(gnuplot);
 	#ifdef _WIN32
 		_pclose(gnuplot);
@@ -234,8 +249,14 @@ triple normalize(triple in, triple max) {
 void flip_plot(triple **data, char *filename, sim_params params) {
 	/* Writing the PPM file is done according to this StackOverflow answer:
 	 * https://stackoverflow.com/a/4346905 */
-	FILE *f = fopen(filename, "wb");
+	FILE *f = fopen(str_concat(filename, ".ppm"), "wb");
+	if (f == NULL) {
+		printf("Failed to open %s.ppm for writing.");
+		return;
+	}
+	/* Write the magix number and the parameters of the image */
 	fprintf(f, "P6\n%lu %lu 255\n", params.flip_length, params.flip_length);
+	/* Iterating through the matrix */
 	for (ulong i = 0; i < params.flip_length; i++) {
 		for (ulong j = 0; j < params.flip_length; j++) {
 			unsigned char col = (unsigned char)(255*normalize(data[i][j], params.t));
@@ -248,7 +269,41 @@ void flip_plot(triple **data, char *filename, sim_params params) {
     		}
 	}
 	fclose(f);
-	printf("Plot written to %s\n", filename);
+	printf("Plot written to %s.ppm\n", filename);
+}
+
+void convert_plot(char *filename, char *target) {
+	#ifdef _WIN32
+		int has_convert =
+			!system("where convert 2> nul 1> nul");
+	#else
+		int has_convert =
+			!system("which convert 2> /dev/null 1> /dev/null");
+	#endif
+	if (has_convert) {
+		/* This is absolutely disgusting, I should find a better way
+		 * to construct the command */
+		char *command = str_concat("convert ", filename);
+		command = str_concat(command, " ");
+		command = str_concat(command, target);
+		system(command);
+		free(command);
+		printf("File saved as %s\n", target);
+		printf("Would you like to remove the original file? [y/N] ");
+		char response;
+		scanf("%c", &response);
+		if (response == 'y' || response == 'Y') {
+			remove(filename);
+			printf("Removed %s\n", filename);
+		}
+	}
+	else {
+		printf("convert could not be found,\
+				no output will be produced.\n");
+		printf("Please install ImageMagick to\
+				export to other formats.\n");
+	}
+
 }
 
 triple **flip_matrix(sim_params params, constants c) {
@@ -263,20 +318,161 @@ triple **flip_matrix(sim_params params, constants c) {
 	return results;
 }
 
+/* Taken from https://stackoverflow.com/a/58434556 */
+int get_choice() {
+	char buff[256];
+	int choice = 0;
+   	while (fgets(buff, sizeof(buff), stdin)) {
+      		if (sscanf(buff, "%d", &choice) == 1)
+         		break;
+	}
+	return choice;
+}
+
+
+void general_setup(constants *c, sim_params *p) {
+	int choice;
+	while (1) {
+		printf("\nGeneral options\n[1] m = %Lf kg\n", c->m);
+		printf("[2] l = %Lf m\n[3] g = %Lf m/s^2\n", c->l, c->g);
+		printf("[4] t = %Lf s\n[5] f = %lu Hz\n", p->t, p->freq);
+		printf("[6] Exit\nPlease enter your choice [1-6]: ");
+		choice = get_choice();
+		switch (choice) {
+			case 1 :
+				printf("Please enter new value for m [1]: ");
+				if (!scanf("%Lf", &c->m))
+					c->m = 1;
+				break;
+			case 2 :
+				printf("Please enter new value for l [1]: ");
+				if (!scanf("%Lf", &c->l))
+					c->l = 1;
+				break;
+			case 3 :
+				printf("Please enter new value for g [9.81]: ");
+				if (!scanf("%Lf", &c->g))
+					c->g = 9.81;
+				break;
+			case 4 :
+				printf("Please enter new value for t [20]: ");
+				if (!scanf("%Lf", &p->t))
+					p->t = 20;
+				break;
+			case 5 :
+				printf("Please enter new value for f [1000]: ");
+				if (!scanf("%lu", &p->freq))
+					p->freq = 1000;
+				break;
+			default :
+				return;
+		}
+	}
+}
+
+void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2) {
+	int choice;
+	int sim_done = 0;
+
+	/* I could read it character-by-character into a dynamic array,
+	 * but the code's getting too long as it is and I'm not particularly
+	 * worried about malicious users exploiting the buffer size. */
+	char buffer[1024];
+	
+	pend_state *result;
+	while (1) {
+		printf("\nFull trajectory simulation options\n[1] Theta 1 = %Lf\n", *theta1);
+		printf("[2] Theta 2 = %Lf\n[3] Plotting frequency: %lu Hz\n", *theta2, p->plot_freq);
+		printf("[4] Run simulation\n[5] Save data to csv\n");
+		printf("[6] Plot phase space\n");
+		printf("[7] Exit\nPlease enter your choice [1-7]: ");
+		choice = get_choice();
+		switch (choice) {
+			case 1 :
+				printf("Please enter new value for Theta 1 [0]: ");
+				if (!scanf("%Lf", theta1))
+					*theta1 = 0;
+				sim_done = 0;
+				break;
+			case 2 :
+				printf("Please enter new value for Theta 2 [0]: ");
+				if (!scanf("%Lf", theta2))
+					*theta2 = 0;
+				sim_done = 0;
+				break;
+			case 3 :
+				printf("Please enter new value for plotting frequency [1000]: ");
+				if (!scanf("%lu", &p->plot_freq))
+					p->plot_freq = 1000;
+				break;
+			case 4 :
+				printf("Started simulation\n");
+				result = full_sim(*theta1, *theta2, *c, *p);
+				sim_done = 1;
+				break;
+			case 5 :
+				if (!sim_done) {
+					printf("No up-to-date simultion found, starting it\n");
+					result = full_sim(*theta1, *theta2, *c, *p);
+					sim_done = 1;
+				}
+				printf("Enter filename for CSV file: ");
+				scanf("%[^\n]s", buffer);
+				save_sim_data(result, *p, buffer);
+				break;
+			case 6 :
+				if (!sim_done) {
+					printf("No up-to-date simultion found, starting it\n");
+					result = full_sim(*theta1, *theta2, *c, *p);
+					sim_done = 1;
+				}
+				printf("Enter filename for SVG plot: ");
+				scanf("%[^\n]s", buffer);
+				plot_phase_space(result, *p, buffer);
+				break;
+			default:
+				return;
+		}
+	}
+	free(result);
+}
+
+
+
+void flip_setup(constants *c, sim_params *p) {
+	printf("Dummy function\n");
+}
+
 int main() {
+	/* Set default parameters */
 	constants c = {1, 1, 9.81};
+	triple theta1 = 0, theta2 = 0;
 	sim_params params;
 	params.t = 60;
 	params.flip_length = 32;
 	params.freq = 1000;
 	params.dt = (triple)1/params.freq;
 	params.steps = (ulong)(params.t * params.freq);
-	printf("Steps: %lu\n", params.steps);
 	params.plot_freq = 1000;
-	/*triple **flips = flip_matrix(params, c);
-	flip_plot(flips, "data/out.ppm", params);*/
-	pend_state *states = full_sim(1, 2, c, params);
-	save_sim_data(states, params);
-	plot_phase_space("data/phase.svg");
+	int done = 0;
+	int choice;
+	while (!done) {
+		printf("\nMain menu\n[1] General options\n");
+		printf("[2] Full-trajectory simulation\n");
+		printf("[3] Flipover time simulation\n");
+		printf("[4] Exit\nPlease enter your choice [1-4]: ");
+		choice = get_choice();
+
+		switch (choice) {
+			case 1: general_setup(&c, &params); break;
+			case 2: full_setup(&c, &params, &theta1, &theta2); break;
+			case 3: flip_setup(&c, &params); break;
+			default: done = 1; break;
+		}
+	}
+
+	triple **flips = flip_matrix(params, c);
+	flip_plot(flips, "data/out", params);
+	convert_plot("data/out", "pdf");
 	return 0;
 }
