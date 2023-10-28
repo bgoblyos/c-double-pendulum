@@ -281,7 +281,7 @@ void convert_plot(char *filename, char *target) {
 			!system("which convert 2> /dev/null 1> /dev/null");
 	#endif
 	if (has_convert) {
-		/* This is absolutely disgusting, I should find a better way
+		/* This isn't exactly elegant, I should find a better way
 		 * to construct the command */
 		char *command = str_concat("convert ", filename);
 		command = str_concat(command, " ");
@@ -329,6 +329,30 @@ int get_choice() {
 	return choice;
 }
 
+void get_fname(char *input) {
+	char buff[4094];
+	scanf("%[^\n]s", buff);
+	size_t len = strlen(buff);
+	size_t i = 0;
+	/* count leading spaces */
+	while (buff[i] == ' ')
+		i++;
+	/* don't modify the string if the input is empty */
+	if (len - i > 0) {
+		free(input);
+		input = (char*)malloc((len - i + 1)*sizeof(char));
+		/* copy the contents of the buffer,
+		 * offset by the number of spaces */
+		strcpy(input, buff + i);
+		printf("Contents of input: %s\n", input);
+	}
+}
+
+char *to_dynamic(char *input) {
+	char *output = (char*)malloc((strlen(input) + 1)*sizeof(char));
+	strcpy(output, input);
+	return output;
+}
 
 void general_setup(constants *c, sim_params *p) {
 	int choice;
@@ -370,14 +394,9 @@ void general_setup(constants *c, sim_params *p) {
 	}
 }
 
-void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2) {
+void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, char *csv_fname, char *svg_fname) {
 	int choice;
 	int sim_done = 0;
-
-	/* I could read it character-by-character into a dynamic array,
-	 * but the code's getting too long as it is and I'm not particularly
-	 * worried about malicious users exploiting the buffer size. */
-	char buffer[1024];
 	
 	pend_state *result;
 	while (1) {
@@ -416,9 +435,9 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2) {
 					result = full_sim(*theta1, *theta2, *c, *p);
 					sim_done = 1;
 				}
-				printf("Enter filename for CSV file: ");
-				scanf("%[^\n]s", buffer);
-				save_sim_data(result, *p, buffer);
+				printf("Enter filename for CSV file [%s]: ", csv_fname);
+				get_fname(csv_fname);
+				save_sim_data(result, *p, csv_fname);
 				break;
 			case 6 :
 				if (!sim_done) {
@@ -426,9 +445,9 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2) {
 					result = full_sim(*theta1, *theta2, *c, *p);
 					sim_done = 1;
 				}
-				printf("Enter filename for SVG plot: ");
-				scanf("%[^\n]s", buffer);
-				plot_phase_space(result, *p, buffer);
+				printf("Enter filename for SVG plot [%s]: ", svg_fname);
+				get_fname(svg_fname);
+				plot_phase_space(result, *p, svg_fname);
 				break;
 			default:
 				return;
@@ -438,12 +457,19 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2) {
 }
 
 
-
-void flip_setup(constants *c, sim_params *p) {
+void flip_setup(constants *c, sim_params *p, char *ppm_fname, char *img_fname) {
 	printf("Dummy function\n");
 }
 
 int main() {
+	char *csv_def = "data/sim.svg";
+	char *svg_def = "data/phase_space.svg";
+	char *ppm_def = "data/flip.ppm";
+	char *img_def = "data/flip.png";
+	char *csv_fname = to_dynamic(csv_def);
+	char *svg_fname = to_dynamic(svg_def);
+	char *ppm_fname = to_dynamic(ppm_def);
+	char *img_fname = to_dynamic(img_def);
 	/* Set default parameters */
 	constants c = {1, 1, 9.81};
 	triple theta1 = 0, theta2 = 0;
@@ -465,8 +491,12 @@ int main() {
 
 		switch (choice) {
 			case 1: general_setup(&c, &params); break;
-			case 2: full_setup(&c, &params, &theta1, &theta2); break;
-			case 3: flip_setup(&c, &params); break;
+			case 2:
+				full_setup(&c, &params, &theta1, &theta2, csv_fname, svg_fname);
+				break;
+			case 3: 
+				flip_setup(&c, &params, ppm_fname, svg_fname);
+				break;
 			default: done = 1; break;
 		}
 	}
