@@ -293,9 +293,8 @@ void convert_plot(char *filename, char *target) {
 		free(command);
 		printf("File saved as %s\n", target);
 		printf("Would you like to remove the original file? [y/N] ");
-		char response;
-		scanf("%c", &response);
-		if (response == 'y' || response == 'Y') {
+		char response = get_bool();
+		if (response) {
 			remove(filename);
 			printf("Removed %s\n", filename);
 		}
@@ -318,6 +317,7 @@ triple **flip_matrix(sim_params params, constants c) {
 		}
 		printf("Row %3lu/%lu computed\n", i + 1, params.flip_length);
 	}
+	free(thetas);
 	return results;
 }
 
@@ -328,38 +328,33 @@ char *to_dynamic(char *input) {
 }
 
 void general_setup(constants *c, sim_params *p) {
-	int choice;
+	ulong choice;
 	while (1) {
 		printf("\nGeneral options\n[1] m = %Lf kg\n", c->m);
 		printf("[2] l = %Lf m\n[3] g = %Lf m/s^2\n", c->l, c->g);
 		printf("[4] t = %Lf s\n[5] f = %lu Hz\n", p->t, p->freq);
 		printf("[6] Exit\nPlease enter your choice [1-6]: ");
-		choice = get_choice();
+		choice = get_ulong(0);
 		switch (choice) {
 			case 1 :
 				printf("Please enter new value for m [1]: ");
-				if (!scanf("%Lf", &c->m))
-					c->m = 1;
+				c->m = get_triple(1);
 				break;
 			case 2 :
 				printf("Please enter new value for l [1]: ");
-				if (!scanf("%Lf", &c->l))
-					c->l = 1;
+				c->l = get_triple(1);
 				break;
 			case 3 :
 				printf("Please enter new value for g [9.81]: ");
-				if (!scanf("%Lf", &c->g))
-					c->g = 9.81;
+				c->g = get_triple(9.81);
 				break;
 			case 4 :
-				printf("Please enter new value for t [20]: ");
-				if (!scanf("%Lf", &p->t))
-					p->t = 20;
+				printf("Please enter new value for t [60]: ");
+				p->t = get_triple(60);
 				break;
 			case 5 :
 				printf("Please enter new value for f [1000]: ");
-				if (!scanf("%lu", &p->freq))
-					p->freq = 1000;
+				p->freq = get_ulong(1000);
 				break;
 			default :
 				return;
@@ -368,7 +363,7 @@ void general_setup(constants *c, sim_params *p) {
 }
 
 void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, char *csv_def, char *svg_def) {
-	int choice;
+	ulong choice;
 	int sim_done = 0;
 	char *csv_fname = to_dynamic(csv_def);
 	char *svg_fname = to_dynamic(svg_def);
@@ -380,24 +375,21 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 		printf("[4] Run simulation\n[5] Save data to csv\n");
 		printf("[6] Plot phase space\n");
 		printf("[7] Exit\nPlease enter your choice [1-7]: ");
-		choice = get_choice();
+		choice = get_ulong(0);
 		switch (choice) {
 			case 1 :
 				printf("Please enter new value for Theta 1 [0]: ");
-				if (!scanf("%Lf", theta1))
-					*theta1 = 0;
+				*theta1 = get_triple(0);
 				sim_done = 0;
 				break;
 			case 2 :
 				printf("Please enter new value for Theta 2 [0]: ");
-				if (!scanf("%Lf", theta2))
-					*theta2 = 0;
+				*theta2 = get_triple(0);
 				sim_done = 0;
 				break;
 			case 3 :
 				printf("Please enter new value for plotting frequency [1000]: ");
-				if (!scanf("%lu", &p->plot_freq))
-					p->plot_freq = 1000;
+				p->plot_freq = get_ulong(1000);
 				break;
 			case 4 :
 				printf("Started simulation\n");
@@ -422,8 +414,6 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				}
 				printf("Enter filename for SVG plot [%s]: ", svg_fname);
 				svg_fname = get_fname(svg_fname);
-				for (size_t i = 0; i <= strlen(svg_fname); ++i)
-					printf("Character: %c\tCode: %d\n", svg_fname[i], (int)svg_fname[i]);
 				plot_phase_space(result, *p, svg_fname);
 				break;
 			default:
@@ -433,18 +423,63 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 	free(result);
 }
 
+void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
+	ulong choice;
+	int sim_done = 0;
+	int ppm_done = 0;
+	char *ppm_fname = to_dynamic(ppm_def);
+	char *img_fname = to_dynamic(img_def);
+	
+	triple **result;
 
-void flip_setup(constants *c, sim_params *p, char *ppm_fname, char *img_fname) {
-	printf("Dummy function\n");
+	while (1) {
+		printf("\nFlipover simulation options\n");
+		printf("[1] Pixels per side: %lu\n", p->flip_length);
+		printf("[2] Run simulation\n[3] Save output to PPM\n");
+		printf("[4] Convert PPM to another image format\n");
+		printf("[5] Exit\nPlease enter your choice [1-5]: ");
+		fflush(stdin);
+		choice = get_ulong(0);
+		switch (choice) {
+			case 1 :
+				printf("Please enter new value for side length [32]: ");
+				p->flip_length = get_ulong(32);
+				sim_done = 0;
+				break;
+			case 2 :
+				printf("Started simulation\n");
+				result = flip_matrix(*p, *c);
+				sim_done = 1;
+				break;
+			case 3 :
+				if (!sim_done) {
+					printf("No up-to-date simulation found, starting it\n");
+					result = flip_matrix(*p, *c);
+					sim_done = 1;
+				}
+				printf("Enter filename for PPM file [%s]: ", ppm_fname);
+				ppm_fname = get_fname(ppm_fname);
+				flip_plot(result, ppm_fname, *p);
+				break;
+			case 4 :
+				printf("Enter filename for PPM file [%s]: ", ppm_fname);
+				ppm_fname = get_fname(ppm_fname);
+				printf("Enter filename for target file [%s]: ", img_fname);
+				img_fname = get_fname(img_fname);
+				convert_plot(ppm_fname, img_fname);
+				break;
+			default:
+				return;
+		}
+	}
+	free(result);
 }
 
 int main() {
-	char *csv_def = "data/sim.svg";
+	char *csv_def = "data/sim.csv";
 	char *svg_def = "data/phase_space.svg";
 	char *ppm_def = "data/flip.ppm";
 	char *img_def = "data/flip.png";
-	char *ppm_fname = to_dynamic(ppm_def);
-	char *img_fname = to_dynamic(img_def);
 	/* Set default parameters */
 	constants c = {1, 1, 9.81};
 	triple theta1 = 0, theta2 = 0;
@@ -456,13 +491,13 @@ int main() {
 	params.steps = (ulong)(params.t * params.freq);
 	params.plot_freq = 1000;
 	int done = 0;
-	int choice;
+	ulong choice;
 	while (!done) {
 		printf("\nMain menu\n[1] General options\n");
 		printf("[2] Full-trajectory simulation\n");
 		printf("[3] Flipover time simulation\n");
 		printf("[4] Exit\nPlease enter your choice [1-4]: ");
-		choice = get_choice();
+		choice = get_ulong(0);
 
 		switch (choice) {
 			case 1: general_setup(&c, &params); break;
@@ -470,14 +505,11 @@ int main() {
 				full_setup(&c, &params, &theta1, &theta2, csv_def, svg_def);
 				break;
 			case 3: 
-				flip_setup(&c, &params, ppm_fname, img_fname);
+				flip_setup(&c, &params, ppm_def, img_def);
 				break;
 			default: done = 1; break;
 		}
 	}
 
-	triple **flips = flip_matrix(params, c);
-	flip_plot(flips, "data/out", params);
-	convert_plot("data/out", "pdf");
 	return 0;
 }

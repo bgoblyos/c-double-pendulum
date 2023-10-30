@@ -7,5 +7,11 @@ size_t leading_spaces(char*);
  * to the supplied string if it's non-empty */
 char *get_fname(char*);
 
-/* Function for reading in a decimal choice from the user */
-int get_choice(void);
+/* Function for reading in an unsigned long int from the user */
+unsigned long int get_ulong(unsigned int);
+
+/* Function for reading in a long double from the user */
+long double get_triple(long double);
+
+/* Function for reading in a yes/no decision from the user */
+int get_bool(void);
