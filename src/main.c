@@ -3,13 +3,15 @@
 #include <math.h>
 #include <string.h>
 
+#include "input.h"
+
 /* This is most likely defined in math.h as well,
  * but here it is rounded to 30 decimals just to be safe */
 #define PI 3.14159265358979323846264338328
 
 /* The name isn't quite correct, since it's
  * most likely 80 bits, but it'll do for now.
- * It's also the same os double on Windows. */
+ * It's also the same as double on Windows. */
 typedef long double triple;
 
 typedef unsigned long int ulong;
@@ -43,19 +45,19 @@ typedef struct {
  * Source: https://en.wikipedia.org/wiki/Double_pendulum */
 
 triple d_theta_1(triple t1, triple t2, triple p1, triple p2, constants c) {
-	return (6/(c.m*pow(c.l, 2)))*(2*p1-3*cos(t1 - t2)*p2)/(16 - 9*pow(cos(t1 - t2), 2));
+	return (6/(c.m*pow(c.l, 2)))*(2*p1-3*cosl(t1 - t2)*p2)/(16 - 9*pow(cosl(t1 - t2), 2));
 }
 
 triple d_theta_2(triple t1, triple t2, triple p1, triple p2, constants c) {
-	return (6/(c.m*pow(c.l, 2)))*(8*p2-3*cos(t1 - t2)*p1)/(16 - 9*pow(cos(t1 - t2), 2));
+	return (6/(c.m*pow(c.l, 2)))*(8*p2-3*cosl(t1 - t2)*p1)/(16 - 9*pow(cosl(t1 - t2), 2));
 }
 
 triple d_p_1(triple t1, triple t2, triple dt1, triple dt2, constants c) {
-	return -0.5 * c.m * pow(c.l, 2) * (dt1 * dt2 * sin(t1 - t2) + 3*c.g*sin(t1)/c.l);
+	return -0.5 * c.m * pow(c.l, 2) * (dt1 * dt2 * sinl(t1 - t2) + 3*c.g*sinl(t1)/c.l);
 }
 
 triple d_p_2(triple t1, triple t2, triple dt1, triple dt2, constants c) {
-	return -0.5 * c.m * pow(c.l, 2) * (-dt1 * dt2 * sin(t1 - t2) + c.g*sin(t2)/c.l);
+	return -0.5 * c.m * pow(c.l, 2) * (-dt1 * dt2 * sinl(t1 - t2) + c.g*sinl(t2)/c.l);
 }
 
 triple triple_abs(triple n) {
@@ -161,6 +163,7 @@ void save_sim_data(pend_state *states, sim_params params, char *fname) {
 		fprintf(f, "%Lf, %Lf, %Lf, %Lf\n",
 			states[i].t1, states[i].p1, states[i].t2, states[i].p2);
 	fclose(f);
+	printf("Data saved to %s\n", fname);
 }
 
 void plot_phase_space(pend_state *states, sim_params params, char *filename) {
@@ -178,7 +181,6 @@ void plot_phase_space(pend_state *states, sim_params params, char *filename) {
 	#endif
 	if (gnuplot == NULL) {
 		printf("gnuplot could not be found, no plot will be saved.\n");
-		printf("The raw data is accesible under data/\n");
 		return;
 	}
 	ulong skip = params.freq / params.plot_freq;
@@ -249,7 +251,7 @@ triple normalize(triple in, triple max) {
 void flip_plot(triple **data, char *filename, sim_params params) {
 	/* Writing the PPM file is done according to this StackOverflow answer:
 	 * https://stackoverflow.com/a/4346905 */
-	FILE *f = fopen(str_concat(filename, ".ppm"), "wb");
+	FILE *f = fopen(filename, "wb");
 	if (f == NULL) {
 		printf("Failed to open %s.ppm for writing.");
 		return;
@@ -269,15 +271,16 @@ void flip_plot(triple **data, char *filename, sim_params params) {
     		}
 	}
 	fclose(f);
-	printf("Plot written to %s.ppm\n", filename);
+	printf("Plot written to %s\n", filename);
 }
 
 void convert_plot(char *filename, char *target) {
+	int has_convert = 0;
 	#ifdef _WIN32
-		int has_convert =
+		has_convert =
 			!system("where convert 2> nul 1> nul");
 	#else
-		int has_convert =
+		has_convert =
 			!system("which convert 2> /dev/null 1> /dev/null");
 	#endif
 	if (has_convert) {
@@ -316,36 +319,6 @@ triple **flip_matrix(sim_params params, constants c) {
 		printf("Row %3lu/%lu computed\n", i + 1, params.flip_length);
 	}
 	return results;
-}
-
-/* Taken from https://stackoverflow.com/a/58434556 */
-int get_choice() {
-	char buff[256];
-	int choice = 0;
-   	while (fgets(buff, sizeof(buff), stdin)) {
-      		if (sscanf(buff, "%d", &choice) == 1)
-         		break;
-	}
-	return choice;
-}
-
-void get_fname(char *input) {
-	char buff[4094];
-	scanf("%[^\n]s", buff);
-	size_t len = strlen(buff);
-	size_t i = 0;
-	/* count leading spaces */
-	while (buff[i] == ' ')
-		i++;
-	/* don't modify the string if the input is empty */
-	if (len - i > 0) {
-		free(input);
-		input = (char*)malloc((len - i + 1)*sizeof(char));
-		/* copy the contents of the buffer,
-		 * offset by the number of spaces */
-		strcpy(input, buff + i);
-		printf("Contents of input: %s\n", input);
-	}
 }
 
 char *to_dynamic(char *input) {
@@ -394,9 +367,11 @@ void general_setup(constants *c, sim_params *p) {
 	}
 }
 
-void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, char *csv_fname, char *svg_fname) {
+void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, char *csv_def, char *svg_def) {
 	int choice;
 	int sim_done = 0;
+	char *csv_fname = to_dynamic(csv_def);
+	char *svg_fname = to_dynamic(svg_def);
 	
 	pend_state *result;
 	while (1) {
@@ -431,12 +406,12 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				break;
 			case 5 :
 				if (!sim_done) {
-					printf("No up-to-date simultion found, starting it\n");
+					printf("No up-to-date simulation found, starting it\n");
 					result = full_sim(*theta1, *theta2, *c, *p);
 					sim_done = 1;
 				}
 				printf("Enter filename for CSV file [%s]: ", csv_fname);
-				get_fname(csv_fname);
+				csv_fname = get_fname(csv_fname);
 				save_sim_data(result, *p, csv_fname);
 				break;
 			case 6 :
@@ -446,7 +421,9 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 					sim_done = 1;
 				}
 				printf("Enter filename for SVG plot [%s]: ", svg_fname);
-				get_fname(svg_fname);
+				svg_fname = get_fname(svg_fname);
+				for (size_t i = 0; i <= strlen(svg_fname); ++i)
+					printf("Character: %c\tCode: %d\n", svg_fname[i], (int)svg_fname[i]);
 				plot_phase_space(result, *p, svg_fname);
 				break;
 			default:
@@ -466,8 +443,6 @@ int main() {
 	char *svg_def = "data/phase_space.svg";
 	char *ppm_def = "data/flip.ppm";
 	char *img_def = "data/flip.png";
-	char *csv_fname = to_dynamic(csv_def);
-	char *svg_fname = to_dynamic(svg_def);
 	char *ppm_fname = to_dynamic(ppm_def);
 	char *img_fname = to_dynamic(img_def);
 	/* Set default parameters */
@@ -492,10 +467,10 @@ int main() {
 		switch (choice) {
 			case 1: general_setup(&c, &params); break;
 			case 2:
-				full_setup(&c, &params, &theta1, &theta2, csv_fname, svg_fname);
+				full_setup(&c, &params, &theta1, &theta2, csv_def, svg_def);
 				break;
 			case 3: 
-				flip_setup(&c, &params, ppm_fname, svg_fname);
+				flip_setup(&c, &params, ppm_fname, img_fname);
 				break;
 			default: done = 1; break;
 		}
