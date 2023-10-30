@@ -14,3 +14,6 @@ clean:
 optimized:
 	echo "Building with completely unnecessary optimizations"
 	gcc -lm -Ofast -s -flto -funroll-loops -finline-functions src/main.c src/input.c -o bin/dpsim
+
+pedantic:
+	gcc src/main.c src/input.c -o bin/dpsim-debug -lm -std=iso9899:1990 -pedantic -Wall -Werror

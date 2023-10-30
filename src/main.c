@@ -148,7 +148,7 @@ pend_state *full_sim(triple theta1_0, triple theta2_0,
 
 	triple h = params.dt / 2;
 
-	for (unsigned long int i = 2; i < params.steps; ++i)
+	for (ulong i = 2; i < params.steps; ++i)
 		states[i] = step_sim(states[i-2], states[i-1], c, h);
 
 	return states;
@@ -162,6 +162,7 @@ void save_sim_data(pend_state *states, sim_params params, char *fname) {
 	if (f == NULL) {
 		printf("Could not open file for writing.\n");
 		return;
+	}
 	for (ulong i = 0; i < params.steps; i += skip)
 		fprintf(f, "%Lf, %Lf, %Lf, %Lf\n",
 			states[i].t1, states[i].p1, states[i].t2, states[i].p2);
@@ -213,7 +214,7 @@ triple flip_sim(triple theta1, triple theta2, constants c, sim_params params) {
 	old.t2 = prev.t2 = theta2;
 	prev.p1 = prev.p2 = 0;
 
-	for (unsigned long int i = 0; i < params.steps; ++i) {
+	for (ulong i = 0; i < params.steps; ++i) {
 		current = step_sim(old, prev, c, params.dt/2);
 		if (triple_abs(current.t2) > PI)
 			return i*params.dt;
@@ -240,7 +241,7 @@ triple* linspace(ulong length) {
 triple** matrix(ulong length) {
 	triple **result = (triple**)malloc(length*sizeof(triple*));
 	result[0] = (triple*)malloc(length*length*sizeof(triple));
-	for (unsigned int i = 1; i < length; ++i)
+	for (ulong i = 1; i < length; ++i)
 		result[i] = result[0] + i * length;
 	return result;
 }
@@ -251,15 +252,15 @@ triple normalize(triple in, triple max) {
 	return (in + 1)/(max+1);
 }
 
+/* Writing the PPM file is done according to this StackOverflow answer:
+ * https://stackoverflow.com/a/4346905 */
 void flip_plot(triple **data, char *filename, sim_params params) {
-	/* Writing the PPM file is done according to this StackOverflow answer:
-	 * https://stackoverflow.com/a/4346905 */
 	FILE *f = fopen(filename, "wb");
 	if (f == NULL) {
-		printf("Failed to open %s.ppm for writing.");
+		printf("Failed to open %s for writing.", filename);
 		return;
 	}
-	/* Write the magix number and the parameters of the image */
+	/* Write the magic number and the parameters of the image */
 	fprintf(f, "P6\n%lu %lu 255\n", params.flip_length, params.flip_length);
 	/* Iterating through the matrix */
 	for (ulong i = 0; i < params.flip_length; i++) {
@@ -268,8 +269,8 @@ void flip_plot(triple **data, char *filename, sim_params params) {
       			/* Writing the pixel's RGB data
 			 * The first parameters may be tweaked
 			 * to get different color schemes      */
-			fputc(col, f);         /* RED   */
-			fputc(0, f);           /* GREEN */
+			fputc(col, f);         /* Red   */
+			fputc(0, f);           /* Green */
 			fputc((255-col)/5, f); /* Blue  */
     		}
 	}
@@ -424,12 +425,13 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 		}
 	}
 	free(result);
+	free(csv_fname);
+	free(svg_fname);
 }
 
 void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 	ulong choice;
 	int sim_done = 0;
-	int ppm_done = 0;
 	char *ppm_fname = to_dynamic(ppm_def);
 	char *img_fname = to_dynamic(img_def);
 	
@@ -475,7 +477,10 @@ void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 				return;
 		}
 	}
+	free(result[0]);
 	free(result);
+	free(ppm_fname);
+	free(img_fname);
 }
 
 int main() {
@@ -510,7 +515,9 @@ int main() {
 			case 3: 
 				flip_setup(&c, &params, ppm_def, img_def);
 				break;
-			default: done = 1; break;
+			default:
+				done = 1;
+				break;
 		}
 	}
 
