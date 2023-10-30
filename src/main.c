@@ -159,6 +159,9 @@ void save_sim_data(pend_state *states, sim_params params, char *fname) {
 	skip = skip < 1 ? 1 : skip;
 
 	FILE *f = fopen(fname, "w");
+	if (f == NULL) {
+		printf("Could not open file for writing.\n");
+		return;
 	for (ulong i = 0; i < params.steps; i += skip)
 		fprintf(f, "%Lf, %Lf, %Lf, %Lf\n",
 			states[i].t1, states[i].p1, states[i].t2, states[i].p2);

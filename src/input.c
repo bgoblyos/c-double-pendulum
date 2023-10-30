@@ -61,7 +61,7 @@ triple get_triple(triple def) {
 	return def; /* return default on incorrect input format */
 }
 
-int get_bool(int def) {
+int get_bool() {
 	char buff[BUFF_SIZE];
 	char choice;
 

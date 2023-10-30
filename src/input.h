@@ -8,7 +8,7 @@ size_t leading_spaces(char*);
 char *get_fname(char*);
 
 /* Function for reading in an unsigned long int from the user */
-unsigned long int get_ulong(unsigned int);
+unsigned long int get_ulong(unsigned long int);
 
 /* Function for reading in a long double from the user */
 long double get_triple(long double);
