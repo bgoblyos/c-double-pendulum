@@ -1,5 +1,5 @@
 release:
-	gcc -s -O2 src/main.c src/input.c -o bin/dpsim -lm
+	gcc -s -O2 src/main.c src/input.c -o bin/dpsim -lm -Wall -Werror
 
 run: build-debug
 	bin/dpsim-debug
