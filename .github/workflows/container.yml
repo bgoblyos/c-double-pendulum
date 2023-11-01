@@ -31,6 +31,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build the Container image
-        run: docker build . --file Containerfile --tag c-double-pendulum:latest
+        run: docker build . --file Containerfile --tag bgoblyos/c-double-pendulum:latest
       - name: Push the Container image
         run: docker push ghcr.io/bgoblyos/c-double-pendulum:latest
