@@ -279,18 +279,18 @@ void flip_plot(triple **data, char *filename, sim_params params) {
 }
 
 void convert_plot(char *filename, char *target) {
-	int has_convert = 0;
+	int has_magick = 0;
 	#ifdef _WIN32
-		has_convert =
-			!system("where convert 2> nul 1> nul");
+		has_magick =
+			!system("where magick 2> nul 1> nul");
 	#else
-		has_convert =
-			!system("which convert 2> /dev/null 1> /dev/null");
+		has_magick =
+			!system("which magick 2> /dev/null 1> /dev/null");
 	#endif
-	if (has_convert) {
+	if (has_magick) {
 		/* This isn't exactly elegant, I should find a better way
 		 * to construct the command */
-		char *command = str_concat("convert ", filename);
+		char *command = str_concat("magick ", filename);
 		command = str_concat(command, " ");
 		command = str_concat(command, target);
 		system(command);
@@ -304,10 +304,8 @@ void convert_plot(char *filename, char *target) {
 		}
 	}
 	else {
-		printf("convert could not be found,\
-				no output will be produced.\n");
-		printf("Please install ImageMagick to\
-				export to other formats.\n");
+		printf("magick utility could not be found.\n");
+		printf("Please install ImageMagick to export to other formats.\n");
 	}
 
 }
