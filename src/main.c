@@ -35,7 +35,7 @@ typedef struct {
 	triple t;
 	ulong freq;
 	ulong plot_freq;
-	size_t flip_length; 
+	ulong flip_length; 
 } sim_params;
 
 
