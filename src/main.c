@@ -139,6 +139,8 @@ pend_state *full_sim(triple theta1_0, triple theta2_0,
 	
 	pend_state *states =
 		(pend_state*)malloc(params.steps*sizeof(pend_state));
+	if (states == NULL)
+		return NULL;
 	/* The first two instants are the same, because
 	 * we take a numerical derivative later on */
 	states[0].t1 = states[1].t1 = theta1_0;
@@ -233,6 +235,8 @@ triple flip_sim(triple theta1, triple theta2, constants c, sim_params params) {
 triple* linspace(ulong length) {
 	triple step = (triple)(2*PI)/(length - 1);
 	triple *result = (triple*)malloc(length*sizeof(triple));
+	if (result == NULL)
+		return NULL;
 	for (ulong i = 0; i < length; ++i)
 		result[i] = i*step - PI;
 	return result;
@@ -240,7 +244,11 @@ triple* linspace(ulong length) {
 
 triple** matrix(ulong length) {
 	triple **result = (triple**)malloc(length*sizeof(triple*));
+	if (result == NULL)
+		return NULL;
 	result[0] = (triple*)malloc(length*length*sizeof(triple));
+	if (result[0] == NULL)
+		return NULL;
 	for (ulong i = 1; i < length; ++i)
 		result[i] = result[0] + i * length;
 	return result;
@@ -313,6 +321,8 @@ void convert_plot(char *filename, char *target) {
 triple **flip_matrix(sim_params params, constants c) {
 	triple *thetas = linspace(params.flip_length);
 	triple **results = matrix(params.flip_length);
+	if (thetas == NULL || results == NULL)
+		return NULL;
 	for (ulong i = 0; i < params.flip_length; ++i) {
 		for (ulong j = 0; j < params.flip_length; ++j) {
 			results[i][j] = flip_sim(thetas[i], thetas[j], c, params);
@@ -323,6 +333,8 @@ triple **flip_matrix(sim_params params, constants c) {
 	return results;
 }
 
+/* This is not expected to receive huge input,
+ * so I'm not handling the NULL for now. */
 char *to_dynamic(char *input) {
 	char *output = (char*)malloc((strlen(input) + 1)*sizeof(char));
 	strcpy(output, input);
@@ -396,13 +408,23 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 			case 4 :
 				printf("Started simulation\n");
 				result = full_sim(*theta1, *theta2, *c, *p);
-				sim_done = 1;
+				if (result == NULL) {
+					sim_done = 0;
+					printf("Failed to allocate memory for results.\n");
+				}
+				else
+					sim_done = 1;
 				break;
 			case 5 :
 				if (!sim_done) {
 					printf("No up-to-date simulation found, starting it\n");
 					result = full_sim(*theta1, *theta2, *c, *p);
-					sim_done = 1;
+					if (result == NULL) {
+						printf("Failed to allocate memory for results.\n");
+						break;
+					}
+					else
+						sim_done = 1;
 				}
 				printf("Enter filename for CSV file [%s]: ", csv_fname);
 				csv_fname = get_fname(csv_fname);
@@ -412,7 +434,12 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				if (!sim_done) {
 					printf("No up-to-date simultion found, starting it\n");
 					result = full_sim(*theta1, *theta2, *c, *p);
-					sim_done = 1;
+					if (result == NULL) {
+						printf("Failed to allocate memory for results.\n");
+						break;
+					}
+					else
+						sim_done = 1;
 				}
 				printf("Enter filename for SVG plot [%s]: ", svg_fname);
 				svg_fname = get_fname(svg_fname);
@@ -452,13 +479,23 @@ void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 			case 2 :
 				printf("Started simulation\n");
 				result = flip_matrix(*p, *c);
-				sim_done = 1;
+				if (result == NULL) {
+					printf("Failed to allocate momory for results.\n");
+					sim_done = 0;
+				}
+				else
+					sim_done = 1;
 				break;
 			case 3 :
 				if (!sim_done) {
 					printf("No up-to-date simulation found, starting it\n");
 					result = flip_matrix(*p, *c);
-					sim_done = 1;
+					if (result == NULL) {
+						printf("Failed to allocate momory for results.\n");
+						break;
+					}
+					else
+						sim_done = 1;
 				}
 				printf("Enter filename for PPM file [%s]: ", ppm_fname);
 				ppm_fname = get_fname(ppm_fname);
