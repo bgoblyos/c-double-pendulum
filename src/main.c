@@ -341,6 +341,19 @@ char *to_dynamic(char *input) {
 	return output;
 }
 
+void free_array(pend_state *arr) {
+	if (arr != NULL)
+		free(arr);
+}
+
+void free_matrix(triple **mtr) {
+	if (mtr != NULL) {
+		if (mtr[0] != NULL)
+			free(mtr[0]);
+		free(mtr);
+	}
+}
+
 void general_setup(constants *c, sim_params *p) {
 	ulong choice;
 	while (1) {
@@ -382,7 +395,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 	char *csv_fname = to_dynamic(csv_def);
 	char *svg_fname = to_dynamic(svg_def);
 	
-	pend_state *result;
+	pend_state *result = NULL;
 	while (1) {
 		printf("\nFull trajectory simulation options\n[1] Theta 1 = %Lf\n", *theta1);
 		printf("[2] Theta 2 = %Lf\n[3] Plotting frequency: %lu Hz\n", *theta2, p->plot_freq);
@@ -406,6 +419,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				p->plot_freq = get_ulong(1000);
 				break;
 			case 4 :
+				free_array(result);
 				printf("Started simulation\n");
 				result = full_sim(*theta1, *theta2, *c, *p);
 				if (result == NULL) {
@@ -417,6 +431,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				break;
 			case 5 :
 				if (!sim_done) {
+					free_array(result);
 					printf("No up-to-date simulation found, starting it\n");
 					result = full_sim(*theta1, *theta2, *c, *p);
 					if (result == NULL) {
@@ -432,6 +447,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				break;
 			case 6 :
 				if (!sim_done) {
+					free_array(result);
 					printf("No up-to-date simultion found, starting it\n");
 					result = full_sim(*theta1, *theta2, *c, *p);
 					if (result == NULL) {
@@ -460,7 +476,7 @@ void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 	char *ppm_fname = to_dynamic(ppm_def);
 	char *img_fname = to_dynamic(img_def);
 	
-	triple **result;
+	triple **result = NULL;
 
 	while (1) {
 		printf("\nFlipover simulation options\n");
@@ -477,6 +493,7 @@ void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 				sim_done = 0;
 				break;
 			case 2 :
+				free_matrix(result);
 				printf("Started simulation\n");
 				result = flip_matrix(*p, *c);
 				if (result == NULL) {
@@ -488,6 +505,7 @@ void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 				break;
 			case 3 :
 				if (!sim_done) {
+					free_matrix(result);
 					printf("No up-to-date simulation found, starting it\n");
 					result = flip_matrix(*p, *c);
 					if (result == NULL) {
