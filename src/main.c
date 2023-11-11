@@ -154,26 +154,26 @@ void free_matrix(triple **mtr) {
 	}
 }
 
-void general_setup(constants *c, sim_params *p) {
+void general_setup(sim_params *p) {
 	ulong choice;
 	while (1) {
-		printf("\nGeneral options\n[1] m = %Lf kg\n", c->m);
-		printf("[2] l = %Lf m\n[3] g = %Lf m/s^2\n", c->l, c->g);
+		printf("\nGeneral options\n[1] m = %Lf kg\n", p->c.m);
+		printf("[2] l = %Lf m\n[3] g = %Lf m/s^2\n", p->c.l, p->c.g);
 		printf("[4] t = %Lf s\n[5] f = %lu Hz\n", p->t, p->freq);
 		printf("[6] Exit\nPlease enter your choice [1-6]: ");
 		choice = get_ulong(0);
 		switch (choice) {
 			case 1 :
 				printf("Please enter new value for m [1]: ");
-				c->m = get_triple(1);
+				p->c.m = get_triple(1);
 				break;
 			case 2 :
 				printf("Please enter new value for l [1]: ");
-				c->l = get_triple(1);
+				p->c.l = get_triple(1);
 				break;
 			case 3 :
 				printf("Please enter new value for g [9.81]: ");
-				c->g = get_triple(9.81);
+				p->c.g = get_triple(9.81);
 				break;
 			case 4 :
 				printf("Please enter new value for t [60]: ");
@@ -189,7 +189,7 @@ void general_setup(constants *c, sim_params *p) {
 	}
 }
 
-void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, char *csv_def, char *svg_def) {
+void full_setup(sim_params *p, triple *theta1, triple *theta2, char *csv_def, char *svg_def) {
 	ulong choice;
 	int sim_done = 0;
 	char *csv_fname = to_dynamic(csv_def);
@@ -221,7 +221,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 			case 4 :
 				free_array(result);
 				printf("Started simulation\n");
-				result = full_sim(*theta1, *theta2, *c, *p);
+				result = full_sim(*theta1, *theta2, *p);
 				if (result == NULL) {
 					sim_done = 0;
 					printf("Failed to allocate memory for results.\n");
@@ -233,7 +233,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				if (!sim_done) {
 					free_array(result);
 					printf("No up-to-date simulation found, starting it\n");
-					result = full_sim(*theta1, *theta2, *c, *p);
+					result = full_sim(*theta1, *theta2, *p);
 					if (result == NULL) {
 						printf("Failed to allocate memory for results.\n");
 						break;
@@ -249,7 +249,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 				if (!sim_done) {
 					free_array(result);
 					printf("No up-to-date simultion found, starting it\n");
-					result = full_sim(*theta1, *theta2, *c, *p);
+					result = full_sim(*theta1, *theta2, *p);
 					if (result == NULL) {
 						printf("Failed to allocate memory for results.\n");
 						break;
@@ -270,7 +270,7 @@ void full_setup(constants *c, sim_params *p, triple *theta1, triple *theta2, cha
 	free(svg_fname);
 }
 
-void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
+void flip_setup(sim_params *p, char *ppm_def, char *img_def) {
 	ulong choice;
 	int sim_done = 0;
 	char *ppm_fname = to_dynamic(ppm_def);
@@ -295,7 +295,7 @@ void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 			case 2 :
 				free_matrix(result);
 				printf("Started simulation\n");
-				result = flip_matrix(*p, *c);
+				result = flip_matrix(*p);
 				if (result == NULL) {
 					printf("Failed to allocate momory for results.\n");
 					sim_done = 0;
@@ -307,7 +307,7 @@ void flip_setup(constants *c, sim_params *p, char *ppm_def, char *img_def) {
 				if (!sim_done) {
 					free_matrix(result);
 					printf("No up-to-date simulation found, starting it\n");
-					result = flip_matrix(*p, *c);
+					result = flip_matrix(*p);
 					if (result == NULL) {
 						printf("Failed to allocate momory for results.\n");
 						break;
@@ -342,7 +342,6 @@ int main() {
 	char *ppm_def = "data/flip.ppm";
 	char *img_def = "data/flip.png";
 	/* Set default parameters */
-	constants c = {1, 1, 9.81};
 	triple theta1 = 0, theta2 = 0;
 	sim_params params;
 	params.t = 60;
@@ -351,6 +350,9 @@ int main() {
 	params.dt = (triple)1/params.freq;
 	params.steps = (ulong)(params.t * params.freq);
 	params.plot_freq = 1000;
+	params.c.m = 1;
+	params.c.l = 1;
+	params.c.g = 9.81;
 	int done = 0;
 	ulong choice;
 	while (!done) {
@@ -361,12 +363,12 @@ int main() {
 		choice = get_ulong(0);
 
 		switch (choice) {
-			case 1: general_setup(&c, &params); break;
+			case 1: general_setup(&params); break;
 			case 2:
-				full_setup(&c, &params, &theta1, &theta2, csv_def, svg_def);
+				full_setup(&params, &theta1, &theta2, csv_def, svg_def);
 				break;
 			case 3: 
-				flip_setup(&c, &params, ppm_def, img_def);
+				flip_setup(&params, ppm_def, img_def);
 				break;
 			default:
 				done = 1;

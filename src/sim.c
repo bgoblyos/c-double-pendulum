@@ -111,8 +111,7 @@ pend_state step_sim(pend_state old, pend_state prev, constants c, triple h) {
                 return new;
 }
 
-pend_state *full_sim(triple theta1_0, triple theta2_0,
-                constants c, sim_params params) {
+pend_state *full_sim(triple theta1_0, triple theta2_0, sim_params params) {
 
         pend_state *states =
                 (pend_state*)malloc(params.steps*sizeof(pend_state));
@@ -128,19 +127,19 @@ pend_state *full_sim(triple theta1_0, triple theta2_0,
         triple h = params.dt / 2;
 
         for (ulong i = 2; i < params.steps; ++i)
-                states[i] = step_sim(states[i-2], states[i-1], c, h);
+                states[i] = step_sim(states[i-2], states[i-1], params.c, h);
 
         return states;
 }
 
-triple flip_sim(triple theta1, triple theta2, constants c, sim_params params) {
+triple flip_sim(triple theta1, triple theta2, sim_params params) {
         pend_state old, prev, current;
         old.t1 = prev.t1 = theta1;
         old.t2 = prev.t2 = theta2;
         prev.p1 = prev.p2 = 0;
 
         for (ulong i = 0; i < params.steps; ++i) {
-                current = step_sim(old, prev, c, params.dt/2);
+                current = step_sim(old, prev, params.c, params.dt/2);
                 if (triple_abs(current.t2) > PI)
                         return i*params.dt;
                 old = prev;
@@ -177,14 +176,14 @@ triple** matrix(ulong length) {
         return result;
 }
 
-triple **flip_matrix(sim_params params, constants c) {
+triple **flip_matrix(sim_params params) {
         triple *thetas = linspace(params.flip_length);
         triple **results = matrix(params.flip_length);
         if (thetas == NULL || results == NULL)
                 return NULL;
         for (ulong i = 0; i < params.flip_length; ++i) {
                 for (ulong j = 0; j < params.flip_length; ++j) {
-                        results[i][j] = flip_sim(thetas[i], thetas[j], c, params);
+                        results[i][j] = flip_sim(thetas[i], thetas[j], params);
                 }
                 printf("Row %3lu/%lu computed\n", i + 1, params.flip_length);
         }

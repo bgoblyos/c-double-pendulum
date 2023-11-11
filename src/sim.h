@@ -11,8 +11,7 @@ typedef long double triple;
 /* Unsigled long for storing non-negative integers (like step count) */
 typedef unsigned long int ulong;
 
-/* Structure for storing the constant parameters of the simulation.
- * TODO: merge with sim_params for easier handling. */
+/* Structure for storing the constant parameters of the simulation. */
 typedef struct {
         triple l;
         triple m;
@@ -41,11 +40,11 @@ typedef struct {
 /* This function runs a simulation with the given parameters and stores every
  * intermediate state in a dynamic array. It returns a pointer to this array
  * when the simulation finishes. */
-pend_state *full_sim(triple theta1_0, triple theta2_0, constants c, sim_params params);
+pend_state *full_sim(triple theta1_0, triple theta2_0, sim_params params);
 
 /* Runs params.flip_length^2 simulations until the lower pendulum flips over
  * and returns a dynamic matrix with the time it took for each simulation
  * (-1 if the pendulum did not flip during the simulation). */
-triple **flip_matrix(sim_params params, constants c);
+triple **flip_matrix(sim_params params);
 
 #endif
