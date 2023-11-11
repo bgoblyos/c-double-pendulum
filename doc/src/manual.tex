@@ -1,0 +1,37 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+
+%opening
+\title{Double pendulum simulator\\User manual}
+\author{Bence Göblyös}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\maketitle
+\newpage
+\pagenumbering{arabic}
+
+\section{Installation}
+
+\subsection{Linux and BSD}
+
+\subsubsection{Dependencies}
+A C compiler is required to build the application.
+It has been tested with GCC, but any other compiler should work as well.
+It is also advised to have access to the \texttt{make} utility to run the build scripts.
+
+The application relies on \texttt{gnuplot} to draw the phase space plots,
+so it is highly recommended to install it.
+
+ImageMagick may be used to convert the PPM output into more common formats,
+but it is only required if the image viewer of choice doesn't support PPM images
+(KDE's \texttt{gwenview} can open them by default, for instance).\\\\
+Platform-specific install commands:
+\begin{itemize}
+ \item Debian:\\ \texttt{apt install build-essential gnuplot-nox imagemagick}
+ \item Fedora:\\ \texttt{dnf install @c-development gnuplot-minimal ImageMagick}
+\end{itemize}
+
+
+\end{document}

@@ -10,6 +10,8 @@ build-debug:
 clean:
 	rm bin/*
 
+install:
+	install -v -m 755 ./bin/dpsim /usr/local/bin/
 
 optimized:
 	echo "Building with completely unnecessary optimizations"
