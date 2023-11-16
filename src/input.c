@@ -27,8 +27,10 @@ char *get_fname(char *prev) {
 	size_t stripped_size = strlen(buff + offset);
 	if (stripped_size == 0)
 		return prev; /* do nothing on empty input */
-	free(prev);
 	char *result = malloc((stripped_size + 1)*sizeof(char));
+	if (result == NULL)
+		return prev;
+	free(prev);
 	strcpy(result, buff + offset);
 	return result;
 }
