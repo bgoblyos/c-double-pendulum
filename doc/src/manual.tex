@@ -18,7 +18,8 @@
 
 \subsubsection{Dependencies}
 A C compiler is required to build the application.
-It has been tested with GCC, but any other compiler should work as well.
+It has been tested with GCC (and briefly with clang),
+but any other compiler should work as well.
 It is also advised to have access to the \texttt{make} utility to run the build scripts.
 
 The application relies on \texttt{gnuplot} to draw the phase space plots,
@@ -34,5 +35,17 @@ Platform-specific install commands:
  \item FreeBSD:\\ \texttt{pkg install gnuplot-lite ImageMagick7-nox11}
 \end{itemize}
 
+\subsubsection{Building}
+
+To build the application, run \texttt{make} as an unprivileged user.
+In case \texttt{make} is not available,
+the following command will compile the application:\\
+\texttt{cc -s -O2 src/main.c src/input.c src/sim.c -o bin/dpsim -lm}
+
+\subsubsection{Installing}
+
+The build process will produce a binary in the bin directory.
+It is possible to install it to \texttt{/usr/local/bin/dpsim}
+by running \texttt{make install} as root.
 
 \end{document}
