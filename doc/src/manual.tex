@@ -1,5 +1,6 @@
 \documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
+\usepackage{hyperref}
 
 %opening
 \title{Double pendulum simulator\\User manual}
@@ -47,5 +48,86 @@ the following command will compile the application:\\
 The build process will produce a binary in the bin directory.
 It is possible to install it to \texttt{/usr/local/bin/dpsim}
 by running \texttt{make install} as root.
+
+\subsection{Windows}
+
+\subsubsection{Dependencies}
+The application uses \texttt{gnuplot} to genreate phase space plots and ImageMagick to
+convert PPM output images into more common formats. The latter is optional but
+highly recommended, as the default photo viewer cannot open PPM images.
+
+\subsubsection{Building with GCC (MinGW-w64)}
+
+For this method, a Windows build of GCC is required, obtained either as
+a standalone installation of MinGW-w64, or through Cygwin or MSYS2.
+
+Once inside the build environment, the application may be compiled by
+running \texttt{win/mingw.bat}. The output binary will be \texttt{bin/dpsim.exe}.
+
+\subsubsection{Building with MSVC}
+
+After the MSVC development environment is set up (a guide can be found on
+\href{https://learn.microsoft.com/en-us/cpp/build/walkthrough-compile-a-c-program-on-the-command-line}{this page}),
+running \texttt{win/msvc.bat} from a developer terminal will build the application.
+The output binary will be \texttt{bin/dpsim.exe}.
+
+\subsection{MacOS}
+
+\subsubsection{Dependencies}
+
+The application requires \texttt{gnuplot} to generate phase space plots (downloads can be found on
+\href{https://csml-wiki.northwestern.edu/index.php/Binary_versions_of_Gnuplot_for_OS_X}{this page})
+and ImageMagick to convert PPM output images into more common formats.
+The latter is optional, as the default image viewer can open PPM files.
+
+Additionally, the Xcode command line tools are required to compile the application.
+They may be installed by running \texttt{xcode-select --install} in the terminal.
+
+\subsubsection{Building}
+
+The application may be compiled by running \texttt{make} in the project directory.
+
+\section{Usage}
+
+After starting the program, a text menu will appear with 3 submenus:
+\begin{itemize}
+ \item \textbf{General options}: This menu contains the common simulation parameters:
+ \begin{itemize}
+  \item $m$ for mass of the pendulum
+  \item $l$ for length of the pendulum
+  \item $g$ for gravitational acceleration
+  \item $t$ for simulation time (cutoff time for flipover map)
+  \item $f$ for frequency, the number of steps to take per second
+ \end{itemize}
+ \item \textbf{Full-trajectory simulation}: This menu contains the options for simulating the entire
+ trajectory of a double pendulum and saving the phase space:
+ \begin{itemize}
+  \item \textbf{theta1} and \textbf{theta2} are the starting angles of the upper and lower pendulums
+  respectively, in radians.
+  \item \textbf{Plotting frequency} specifies the number of data points per simulated second that should be used
+  to generate the phase space plots. Higher simulation frequencies result in more accurate simulations,
+  but plotting them isn't always necessary, so the application can skip data points to make the plotting faster.
+  Setting it at or above the simulation frequency will cause every data point to be plotted.
+  \item \textbf{Run simulation} will start the simulation and keep results in memory.
+  \item \textbf{Save data to csv} will export the simulation data into the specified CSV file.
+  If no simulation has been done yet or if the parameters have changed, it will start the simulation as well.
+  \item \textbf{Plot phase space} uses \texttt{gnuplot} to generate an SVG plot of the phase space.
+  Similarly to the previous option, it will start a simulation if no up-to-date results are found.
+ \end{itemize}
+ \item \textbf{Flipover time simulation}: Run multiple simulations and plot the time it takes for the
+ lower pendulum to flip over as a function of the starting angles:
+ \begin{itemize}
+  \item \textbf{Pixels per side} defines the side length of the resulting matrix.
+  \item \textbf{Run simulation} will start the simulations and keep the results in memory.
+  \item \textbf{Save output to PPM} saves the result matrix into a PPM image.
+  If no up-to-date results are found, a new simulation will be started.
+  \item \textbf{Convert PPM to another image format} calls ImageMagick to convert an existing PPM file
+  into a more common format. It does not check for an up-to-date simulation.
+ \end{itemize}
+
+
+\end{itemize}
+
+
 
 \end{document}

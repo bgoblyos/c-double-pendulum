@@ -1,0 +1,83 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+
+%opening
+\title{Double pendulum simulator\\Developer documentation}
+\author{Bence Göblyös}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\maketitle
+\newpage
+\pagenumbering{arabic}
+
+\section{Custom data types}
+\begin{itemize}
+ \item \texttt{triple} is an alias for \texttt{long double}.
+ \item \texttt{ulong} is an alias for \texttt{unsigned long int}.
+ \item \texttt{constants} stores the basic constants of the simulation, $g$, $l$ and $m$, all \texttt{triple}.
+ \item \texttt{pend\_state} stores the current state of the pendulum, $t1$, $t2$, $p1$, $p2$,
+ all \texttt{triple}.
+ \item \texttt{sim\_params} stores all parameters of the simulation: $t$ and $dt$ (\texttt{triple}),
+ \texttt{steps}, \texttt{freq}, \texttt{plot\_freq} and \texttt{flip\_length} (\texttt{ulong}) and
+ $c$ (\texttt{constants}).
+\end{itemize}
+
+\section{\texttt{main.c}}
+
+This file contains the menu code, as well as the pipe and file handling.
+\begin{itemize}
+ \item \texttt{save\_sim\_data(pend\_state *states, sim\_params params,\\char *fname)}\\
+ This function saves the data from \texttt{states} to a file called \texttt{fname} in
+ a CSV format at the samling rate set inside \texttt{params}.
+ \item \texttt{plot\_phase\_space(pend\_state *states, sim\_params params,\\char *filename)}\\
+ This one is similar to the previous, but it sends the data \texttt{gnuplot} through a pipe and saves
+ the resulting SVG as \texttt{filename}.
+ \item \texttt{flip\_plot(triple **data, char *filename, sim\_params params)}\\
+ This function plots the flipover times from \texttt{data} on a heatmap and saves it as a PPM (bitmap)
+ file to \texttt{fname}.
+ \item \texttt{convert\_plot(char *filename, char *target)}\\
+ Just calls \texttt{magick filename target}.
+ \item \texttt{general\_setup(sim\_params *p)}\\
+ Handles general menu and allow the user to change the contents of \texttt{p}.
+ \item \texttt{full\_setup(sim\_params *p, triple *theta1, triple *theta2,\\
+ char *csv\_def, char *svg\_def)}\\
+ Handles full trajectory simulation menu.
+ \item \texttt{flip\_setup(sim\_params *p, char *ppm\_def, char *img\_def)}\\
+ Handles flipover map menu.
+\end{itemize}
+
+\section{\texttt{sim.c}}
+
+This file contains the simulation itself.
+\begin{itemize}
+ \item \texttt{pend\_state step\_sim(pend\_state old, pend\_state prev,\\constants c, triple h)}\\
+ Steps the simulation by $h$ seconds and returns the new state.
+ \item \texttt{pend\_state *full\_sim(triple theta1\_0, triple theta2\_0,\\ sim\_params params)}\\
+ Runs a full trajectory simulation with the specified conditions and returns the array of states.
+ \item \texttt{triple flip\_sim(triple theta1, triple theta2,\\sim\_params params)}\\
+ Runs a simulation with the specified parameters and returns the time it took for the
+ lower pendulum to flip over. Returns -1 if the time runs out.
+ \item \texttt{triple* linspace(ulong length)}\\
+ Creates a \texttt{length} long array and fills it with values between $-\pi$ and $\pi$.
+ \item \texttt{triple **flip\_matrix(sim\_params params)}\\
+ Creates a matrix filled with the flipover times.
+\end{itemize}
+
+\section{\texttt{input.c}}
+
+This file contains input handling.
+\begin{itemize}
+ \item \texttt{char *get\_fname(char *prev)}\\
+ Reads in a filename from \texttt{stdin}. If unsuccessful, it returns \texttt{prev}.
+ \item \texttt{ulong get\_ulong(ulong def)}\\
+ Reads in an ulong from \texttt{stdin}. If unsuccessful, it returns \texttt{def}.
+ \item \texttt{triple get\_triple(triple def)}\\
+ Reads in a triple from \texttt{stdin}. If unsuccessful, it returns \texttt{def}.
+ \item \texttt{int get\_bool()}\\
+ Reads in a yes/no answer from \texttt{stdin}, returning 1 on 'Y' or 'y', 0 otherwise.
+\end{itemize}
+
+
+\end{document}
